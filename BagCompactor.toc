@@ -1,0 +1,7 @@
+## Interface: 11200
+## Title: Bag Compactor
+## Author: Ariel Oak
+## Notes: A tool that helps organize the user's inventory by moving all of the items within it to one end.
+
+BagCompactor.lua
+BagCompactor.xml
