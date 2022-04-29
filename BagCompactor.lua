@@ -1,9 +1,13 @@
-local fromBag, fromBagDirection, fromSlot, fromSlotDirection, toBag, toBagDirection, toSlot, toSlotDirection
+local fromBag, fromBagDirection, fromSlot, fromSlotDirection, strategy, toBag, toBagDirection, toSlot, toSlotDirection
 
 function Compact(arg)
   BagCompactorFrame:Show()
 
-  fromBagDirection, fromSlotDirection, toBagDirection, toSlotDirection = GetDirection(arg)
+  local back = string.find(arg, 'back')
+
+  strategy = GetStrategy(arg)
+
+  fromBagDirection, fromSlotDirection, toBagDirection, toSlotDirection = strategy.getDirection(back)
 
   fromBag, fromSlot = GetStartSlot(fromBagDirection, fromSlotDirection)
   toBag, toSlot = GetStartSlot(toBagDirection, toSlotDirection)
@@ -21,11 +25,11 @@ function Move()
       end
     end
 
-    while not Complete() and (not SlotHasMoveableItem(fromBag, fromSlot) or not IsValidMove(fromBag, fromSlot, toBag, toSlot)) do
+    while not strategy.complete() and (not SlotHasMoveableItem(fromBag, fromSlot) or not strategy.isValidMove(fromBag, fromSlot, toBag, toSlot)) do
       SetNextFromSlot()
     end
 
-    if Complete() then
+    if strategy.complete() then
       BagCompactorFrame:Hide()
       return
     end
@@ -45,27 +49,69 @@ SlashCmdList["COMPACT"] = Compact
 local ASCENDING = 1
 local DESCENDING = -ASCENDING
 
-function Complete()
-  if fromBag == nil or toBag == nil then return true
-  elseif fromBagDirection == ASCENDING then return fromBag > toBag or fromBag == toBag and fromSlot >= toSlot
-  else return fromBag < toBag or fromBag == toBag and fromSlot <= toSlot
+-- Compacts in the fewest moves possible with no regard to the order of items.
+local InvertStrategy = {
+  complete = function()
+    if fromBag == nil or toBag == nil then return true
+    elseif fromBagDirection == ASCENDING then return fromBag > toBag or fromBag == toBag and fromSlot >= toSlot
+    else return fromBag < toBag or fromBag == toBag and fromSlot <= toSlot
+    end
+  end,
+  getDirection = function(back)
+    if back then
+      return ASCENDING, ASCENDING, DESCENDING, DESCENDING
+    else
+      return DESCENDING, DESCENDING, ASCENDING, ASCENDING
+    end
+  end,
+  isValidMove = function(fromBag, fromSlot, toBag, toSlot)
+    if fromBagDirection == ASCENDING then
+      return fromBag < toBag or fromBag == toBag and fromSlot < toSlot
+    else
+      return fromBag > toBag or fromBag == toBag and fromSlot > toSlot
+    end
   end
-end
+}
 
-function GetDirection(arg)
-  if string.find(arg, 'back') then
-    return ASCENDING, ASCENDING, DESCENDING, DESCENDING
-  else
-    return DESCENDING, DESCENDING, ASCENDING, ASCENDING
+-- Preserves the natural order of items, i.e. the order in which items are placed when looting.
+local SlideStrategy = {
+  complete = function()
+    return fromBag == nil or toBag == nil
+  end,
+  getDirection = function(back)
+    if back then
+      return DESCENDING, DESCENDING, DESCENDING, DESCENDING
+    else
+      return ASCENDING, ASCENDING, ASCENDING, ASCENDING
+    end
+  end,
+  isValidMove = function(fromBag, fromSlot, toBag, toSlot)
+    if fromBagDirection == ASCENDING then
+      return fromBag > toBag or fromBag == toBag and fromSlot > toSlot
+    else
+      return fromBag < toBag or fromBag == toBag and fromSlot < toSlot
+    end
   end
-end
-function IsValidMove(fromBag, fromSlot, toBag, toSlot)
-  if fromBagDirection == ASCENDING then
-    return fromBag < toBag or fromBag == toBag and fromSlot < toSlot
-  else
-    return fromBag > toBag or fromBag == toBag and fromSlot > toSlot
+}
+
+-- Preserves the visual order of items within each bag, left-to-right and top-to-bottom.
+local SlideVisualStrategy = {
+  complete = SlideStrategy.complete,
+  getDirection = function(back)
+    if back then
+      return DESCENDING, ASCENDING, DESCENDING, ASCENDING
+    else
+      return ASCENDING, DESCENDING, ASCENDING, DESCENDING
+    end
+  end,
+  isValidMove = function(fromBag, fromSlot, toBag, toSlot)
+    if fromBag ~= toBag then
+      if fromBagDirection == ASCENDING then return fromBag > toBag else return fromBag < toBag end
+    end
+
+    if fromSlotDirection == ASCENDING then return fromSlot > toSlot else return fromSlot < toSlot end
   end
-end
+}
 
 function GetFirstSlot(bag, direction)
   if direction == ASCENDING then return 1 else return GetContainerNumSlots(bag) end
@@ -101,6 +147,13 @@ function GetStartSlot(bagDirection, slotDirection)
   end
 
   return bag, GetSlot()
+end
+
+function GetStrategy(arg)
+  if string.find(arg, 'slide') and string.find(arg, 'visual') then return SlideVisualStrategy
+  elseif string.find(arg, 'slide') then return SlideStrategy
+  else return InvertStrategy
+  end
 end
 
 function SetNextFromSlot()
