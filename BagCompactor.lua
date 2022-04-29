@@ -1,8 +1,10 @@
-function Compact(arg)
-  local direction = GetDirection(arg)
+local direction, fromBag, fromSlot, toBag, toSlot
 
-  local fromBag, fromSlot = GetStartSlot(direction)
-  local toBag, toSlot = GetStartSlot(-direction)
+function Compact(arg)
+  direction = GetDirection(arg)
+
+  fromBag, fromSlot = GetStartSlot(direction)
+  toBag, toSlot = GetStartSlot(-direction)
 
   function Complete()
     if fromBag == nil or toBag == nil then return true
