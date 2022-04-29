@@ -1,26 +1,29 @@
 local direction, fromBag, fromSlot, toBag, toSlot
 
 function Compact(arg)
+  BagCompactorFrame:Show()
+
   direction = GetDirection(arg)
 
   fromBag, fromSlot = GetStartSlot(direction)
   toBag, toSlot = GetStartSlot(-direction)
+end
 
-  function Complete()
-    if fromBag == nil or toBag == nil then return true
-    elseif direction == ASCENDING then return fromBag > toBag or fromBag == toBag and fromSlot >= toSlot
-    else return fromBag < toBag or fromBag == toBag and fromSlot <= toSlot
-    end
-  end
-
+function Move()
   while true do
     fromBag, fromSlot = GetNextSlot(fromBag, fromSlot, toBag, direction, ValidFromSlot)
 
-    if Complete() then break end
+    if Complete() then
+      BagCompactorFrame:Hide()
+      return
+    end
 
     toBag, toSlot = GetNextSlot(toBag, toSlot, fromBag, -direction, ValidToSlot)
 
-    if Complete() then break end
+    if Complete() then
+      BagCompactorFrame:Hide()
+      return
+    end
 
     PickupContainerItem(fromBag, fromSlot)
     PickupContainerItem(toBag, toSlot)
@@ -33,6 +36,13 @@ SlashCmdList["COMPACT"] = Compact
 
 ASCENDING = 1
 DESCENDING = -ASCENDING
+
+function Complete()
+  if fromBag == nil or toBag == nil then return true
+  elseif direction == ASCENDING then return fromBag > toBag or fromBag == toBag and fromSlot >= toSlot
+  else return fromBag < toBag or fromBag == toBag and fromSlot <= toSlot
+  end
+end
 
 function GetDirection(arg)
   if string.find(arg, 'back') then return ASCENDING else return DESCENDING end
