@@ -34,8 +34,8 @@ SLASH_COMPACT1 = "/compact"
 
 SlashCmdList["COMPACT"] = Compact
 
-ASCENDING = 1
-DESCENDING = -ASCENDING
+local ASCENDING = 1
+local DESCENDING = -ASCENDING
 
 function Complete()
   if fromBag == nil or toBag == nil then return true
