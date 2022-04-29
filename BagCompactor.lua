@@ -1,24 +1,24 @@
-local direction, fromBag, fromSlot, toBag, toSlot
+local fromBag, fromBagDirection, fromSlot, fromSlotDirection, toBag, toBagDirection, toSlot, toSlotDirection
 
 function Compact(arg)
   BagCompactorFrame:Show()
 
-  direction = GetDirection(arg)
+  fromBagDirection, fromSlotDirection, toBagDirection, toSlotDirection = GetDirection(arg)
 
-  fromBag, fromSlot = GetStartSlot(direction)
-  toBag, toSlot = GetStartSlot(-direction)
+  fromBag, fromSlot = GetStartSlot(fromBagDirection, fromSlotDirection)
+  toBag, toSlot = GetStartSlot(toBagDirection, toSlotDirection)
 end
 
 function Move()
   while true do
-    fromBag, fromSlot = GetNextSlot(fromBag, fromSlot, toBag, direction, ValidFromSlot)
+    fromBag, fromSlot = GetNextSlot(fromBag, fromSlot, toBag, fromBagDirection, fromSlotDirection, ValidFromSlot)
 
     if Complete() then
       BagCompactorFrame:Hide()
       return
     end
 
-    toBag, toSlot = GetNextSlot(toBag, toSlot, fromBag, -direction, ValidToSlot)
+    toBag, toSlot = GetNextSlot(toBag, toSlot, fromBag, toBagDirection, toSlotDirection, ValidToSlot)
 
     if Complete() then
       BagCompactorFrame:Hide()
@@ -39,13 +39,17 @@ local DESCENDING = -ASCENDING
 
 function Complete()
   if fromBag == nil or toBag == nil then return true
-  elseif direction == ASCENDING then return fromBag > toBag or fromBag == toBag and fromSlot >= toSlot
+  elseif fromBagDirection == ASCENDING then return fromBag > toBag or fromBag == toBag and fromSlot >= toSlot
   else return fromBag < toBag or fromBag == toBag and fromSlot <= toSlot
   end
 end
 
 function GetDirection(arg)
-  if string.find(arg, 'back') then return ASCENDING else return DESCENDING end
+  if string.find(arg, 'back') then
+    return ASCENDING, ASCENDING, DESCENDING, DESCENDING
+  else
+    return DESCENDING, DESCENDING, ASCENDING, ASCENDING
+  end
 end
 
 function GetFirstSlot(bag, direction)
@@ -56,31 +60,31 @@ function GetLastSlot(bag, direction)
   if direction == ASCENDING then return GetContainerNumSlots(bag) else return 1 end
 end
 
-function GetNextSlot(fromBag, fromSlot, toBag, direction, filter)
-  for bag = fromBag, toBag, direction do
+function GetNextSlot(fromBag, fromSlot, toBag, bagDirection, slotDirection, filter)
+  for bag = fromBag, toBag, bagDirection do
     local _, special = GetContainerNumFreeSlots(bag)
 
     if not special then
-      for slot = fromSlot + direction, GetLastSlot(bag, direction), direction do
+      for slot = fromSlot + slotDirection, GetLastSlot(bag, slotDirection), slotDirection do
         local texture, _, locked = GetContainerItemInfo(bag, slot)
 
         if filter(texture, locked) then return bag, slot end
       end
 
-      fromSlot = GetFirstSlot(bag + direction, direction) - direction
+      fromSlot = GetFirstSlot(bag + bagDirection, slotDirection) - slotDirection
     end
   end
 end
 
-function GetStartSlot(direction)
-  function GetBag()
-    if direction == ASCENDING then return 0 else return 4 end
-  end
+function GetStartBag(direction)
+  if direction == ASCENDING then return 0 else return 4 end
+end
 
-  local bag = GetBag()
+function GetStartSlot(bagDirection, slotDirection)
+  local bag = GetStartBag(bagDirection)
 
   function GetSlot()
-    if direction == ASCENDING then return 0 else return GetContainerNumSlots(bag) + 1 end
+    if slotDirection == ASCENDING then return 0 else return GetContainerNumSlots(bag) + 1 end
   end
 
   return bag, GetSlot()
