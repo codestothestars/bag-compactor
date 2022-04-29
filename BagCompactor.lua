@@ -11,14 +11,19 @@ end
 
 function Move()
   while true do
-    fromBag, fromSlot = GetNextSlot(fromBag, fromSlot, toBag, fromBagDirection, fromSlotDirection, ValidFromSlot)
+    while true do
+      local texture, _, locked = GetContainerItemInfo(toBag, toSlot)
 
-    if Complete() then
-      BagCompactorFrame:Hide()
-      return
+      if texture then
+        if locked then return else SetNextToSlot() end
+      else
+        break 
+      end
     end
 
-    toBag, toSlot = GetNextSlot(toBag, toSlot, fromBag, toBagDirection, toSlotDirection, ValidToSlot)
+    while not Complete() and (not SlotHasMoveableItem(fromBag, fromSlot) or not IsValidMove(fromBag, fromSlot, toBag, toSlot)) do
+      SetNextFromSlot()
+    end
 
     if Complete() then
       BagCompactorFrame:Hide()
@@ -27,6 +32,9 @@ function Move()
 
     PickupContainerItem(fromBag, fromSlot)
     PickupContainerItem(toBag, toSlot)
+
+    SetNextFromSlot()
+    SetNextToSlot()
   end
 end
 
@@ -51,28 +59,33 @@ function GetDirection(arg)
     return DESCENDING, DESCENDING, ASCENDING, ASCENDING
   end
 end
+function IsValidMove(fromBag, fromSlot, toBag, toSlot)
+  if fromBagDirection == ASCENDING then
+    return fromBag < toBag or fromBag == toBag and fromSlot < toSlot
+  else
+    return fromBag > toBag or fromBag == toBag and fromSlot > toSlot
+  end
+end
 
 function GetFirstSlot(bag, direction)
   if direction == ASCENDING then return 1 else return GetContainerNumSlots(bag) end
+end
+
+function GetLastBag(direction)
+  if direction == ASCENDING then return 4 else return 0 end
 end
 
 function GetLastSlot(bag, direction)
   if direction == ASCENDING then return GetContainerNumSlots(bag) else return 1 end
 end
 
-function GetNextSlot(fromBag, fromSlot, toBag, bagDirection, slotDirection, filter)
-  for bag = fromBag, toBag, bagDirection do
-    local _, special = GetContainerNumFreeSlots(bag)
+function GetNextSlot(bag, slot, bagDirection, slotDirection)
+  if slot ~= GetLastSlot(bag, slotDirection) then return bag, slot + slotDirection end
 
-    if not special then
-      for slot = fromSlot + slotDirection, GetLastSlot(bag, slotDirection), slotDirection do
-        local texture, _, locked = GetContainerItemInfo(bag, slot)
+  for nextBag = bag + bagDirection, GetLastBag(bagDirection), bagDirection do
+    local _, special = GetContainerNumFreeSlots(nextBag)
 
-        if filter(texture, locked) then return bag, slot end
-      end
-
-      fromSlot = GetFirstSlot(bag + bagDirection, slotDirection) - slotDirection
-    end
+    if not special then return nextBag, GetFirstSlot(nextBag, slotDirection) end
   end
 end
 
@@ -84,18 +97,23 @@ function GetStartSlot(bagDirection, slotDirection)
   local bag = GetStartBag(bagDirection)
 
   function GetSlot()
-    if slotDirection == ASCENDING then return 0 else return GetContainerNumSlots(bag) + 1 end
+    if slotDirection == ASCENDING then return 1 else return GetContainerNumSlots(bag) end
   end
 
   return bag, GetSlot()
 end
 
-function ValidFromSlot(texture, locked)
-  return texture and not locked
+function SetNextFromSlot()
+  fromBag, fromSlot = GetNextSlot(fromBag, fromSlot, fromBagDirection, fromSlotDirection)
 end
 
-function ValidToSlot(texture)
-  return not texture
+function SetNextToSlot()
+  toBag, toSlot = GetNextSlot(toBag, toSlot, toBagDirection, toSlotDirection)
+end
+
+function SlotHasMoveableItem(bag, slot)
+  local texture, _, locked = GetContainerItemInfo(bag, slot)
+  return texture and not locked
 end
 
 -- Polyfill GetContainerNumFreeSlots
