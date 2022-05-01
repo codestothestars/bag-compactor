@@ -49,6 +49,11 @@ SlashCmdList["COMPACT"] = Compact
 local ASCENDING = 1
 local DESCENDING = -ASCENDING
 
+local FIRST_CONTAINER = 0
+local LAST_CONTAINER = 4
+
+local FIRST_SLOT = 1
+
 -- Compacts in the fewest moves possible with no regard to the order of items.
 local InvertStrategy = {
   complete = function()
@@ -114,19 +119,19 @@ local SlideVisualStrategy = {
 }
 
 function GetFirstBag(direction)
-  if direction == ASCENDING then return 0 else return 4 end
+  if direction == ASCENDING then return FIRST_CONTAINER else return LAST_CONTAINER end
 end
 
 function GetFirstSlot(bag, direction)
-  if direction == ASCENDING then return 1 else return GetContainerNumSlots(bag) end
+  if direction == ASCENDING then return FIRST_SLOT else return GetContainerNumSlots(bag) end
 end
 
 function GetLastBag(direction)
-  if direction == ASCENDING then return 4 else return 0 end
+  return GetFirstBag(-direction)
 end
 
 function GetLastSlot(bag, direction)
-  if direction == ASCENDING then return GetContainerNumSlots(bag) else return 1 end
+  return GetFirstSlot(bag, -direction)
 end
 
 function GetNextSlot(bag, slot, bagDirection, slotDirection)
@@ -142,11 +147,7 @@ end
 function GetStartSlot(bagDirection, slotDirection)
   local bag = GetFirstBag(bagDirection)
 
-  function GetSlot()
-    if slotDirection == ASCENDING then return 1 else return GetContainerNumSlots(bag) end
-  end
-
-  return bag, GetSlot()
+  return bag, GetFirstSlot(bag, slotDirection)
 end
 
 function GetStrategy(arg)
@@ -206,7 +207,7 @@ if GetContainerNumFreeSlots == nil then
   function GetContainerNumFreeSlots(bagID)
     local numFreeSlots = 0
 
-    for i = 1, GetContainerNumSlots(bagID) do
+    for i = FIRST_SLOT, GetContainerNumSlots(bagID) do
       if GetContainerItemInfo(bagID, i) == nil then
         numFreeSlots = numFreeSlots + 1
       end
