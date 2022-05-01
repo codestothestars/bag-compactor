@@ -159,7 +159,7 @@ function IterateBags(start, direction)
   return function()
     for bag = start, GetLastBag(direction), direction do
       start = start + direction
-      return bag
+      if GetContainerNumSlots(bag) > 0 then return bag end
     end
   end
 end
