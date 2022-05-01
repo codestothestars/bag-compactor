@@ -113,6 +113,10 @@ local SlideVisualStrategy = {
   end
 }
 
+function GetFirstBag(direction)
+  if direction == ASCENDING then return 0 else return 4 end
+end
+
 function GetFirstSlot(bag, direction)
   if direction == ASCENDING then return 1 else return GetContainerNumSlots(bag) end
 end
@@ -135,12 +139,8 @@ function GetNextSlot(bag, slot, bagDirection, slotDirection)
   end
 end
 
-function GetStartBag(direction)
-  if direction == ASCENDING then return 0 else return 4 end
-end
-
 function GetStartSlot(bagDirection, slotDirection)
-  local bag = GetStartBag(bagDirection)
+  local bag = GetFirstBag(bagDirection)
 
   function GetSlot()
     if slotDirection == ASCENDING then return 1 else return GetContainerNumSlots(bag) end
