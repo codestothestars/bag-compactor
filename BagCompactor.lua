@@ -137,7 +137,7 @@ end
 function GetNextSlot(bag, slot, bagDirection, slotDirection)
   if slot ~= GetLastSlot(bag, slotDirection) then return bag, slot + slotDirection end
 
-  for nextBag = bag + bagDirection, GetLastBag(bagDirection), bagDirection do
+  for nextBag in IterateBags(bag + bagDirection, bagDirection) do
     local _, special = GetContainerNumFreeSlots(nextBag)
 
     if not special then return nextBag, GetFirstSlot(nextBag, slotDirection) end
@@ -145,15 +145,22 @@ function GetNextSlot(bag, slot, bagDirection, slotDirection)
 end
 
 function GetStartSlot(bagDirection, slotDirection)
-  local bag = GetFirstBag(bagDirection)
-
-  return bag, GetFirstSlot(bag, slotDirection)
+  for bag in IterateBags(GetFirstBag(bagDirection), bagDirection) do return bag, GetFirstSlot(bag, slotDirection) end
 end
 
 function GetStrategy(arg)
   if string.find(arg, 'slide') and string.find(arg, 'visual') then return SlideVisualStrategy
   elseif string.find(arg, 'slide') then return SlideStrategy
   else return InvertStrategy
+  end
+end
+
+function IterateBags(start, direction)
+  return function()
+    for bag = start, GetLastBag(direction), direction do
+      start = start + direction
+      return bag
+    end
   end
 end
 
