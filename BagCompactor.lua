@@ -15,7 +15,7 @@ end
 
 function Move()
   while true do
-    while true do
+    while not strategy.complete() do
       local texture, _, locked = GetContainerItemInfo(toBag, toSlot)
 
       if texture then
