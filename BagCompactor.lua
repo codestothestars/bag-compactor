@@ -49,8 +49,12 @@ SlashCmdList["COMPACT"] = Compact
 local ASCENDING = 1
 local DESCENDING = -ASCENDING
 
+-- The client actually uses -1, but we treat the bank as the highest for
+-- logical consistency and do a conversion with AdjustBagArgument.
+local BANK = 11
+
 local FIRST_CONTAINER = 0
-local LAST_CONTAINER = 10
+local LAST_CONTAINER = BANK
 
 local FIRST_SLOT = 1
 
@@ -117,6 +121,12 @@ local SlideVisualStrategy = {
     if fromSlotDirection == ASCENDING then return fromSlot > toSlot else return fromSlot < toSlot end
   end
 }
+
+function AdjustBagArgument(func)
+  return function(bag, ...)
+    if bag == BANK then return func(-1, unpack(arg)) else return func(bag, unpack(arg)) end
+  end
+end
 
 function GetFirstBag(direction)
   if direction == ASCENDING then return FIRST_CONTAINER else return LAST_CONTAINER end
@@ -196,7 +206,7 @@ if GetContainerNumFreeSlots == nil then
   end
 
   function IsSpecialBag(bagID)
-    if bagID == 0 or GetContainerNumSlots(bagID) == 0 then
+    if bagID < 1 or GetContainerNumSlots(bagID) == 0 then
       return false
     end
 
@@ -223,3 +233,8 @@ if GetContainerNumFreeSlots == nil then
     return numFreeSlots, IsSpecialBag(bagID)
   end
 end
+
+GetContainerItemInfo = AdjustBagArgument(GetContainerItemInfo)
+GetContainerNumFreeSlots = AdjustBagArgument(GetContainerNumFreeSlots)
+GetContainerNumSlots = AdjustBagArgument(GetContainerNumSlots)
+PickupContainerItem = AdjustBagArgument(PickupContainerItem)
