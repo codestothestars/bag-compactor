@@ -51,10 +51,11 @@ local DESCENDING = -ASCENDING
 
 -- The client actually uses -1, but we treat the bank as the highest for
 -- logical consistency and do a conversion with AdjustBagArgument.
-local BANK = 11
+local BANK_LOGICAL = 11
+local BANK_REAL = -1
 
 local FIRST_CONTAINER = 0
-local LAST_CONTAINER = BANK
+local LAST_CONTAINER = BANK_LOGICAL
 
 local FIRST_SLOT = 1
 
@@ -124,8 +125,12 @@ local SlideVisualStrategy = {
 
 function AdjustBagArgument(func)
   return function(bag, ...)
-    if bag == BANK then return func(-1, unpack(arg)) else return func(bag, unpack(arg)) end
+    if bag == BANK_LOGICAL then return func(BANK_REAL, unpack(arg)) else return func(bag, unpack(arg)) end
   end
+end
+
+function CanUseBank()
+  return GetInventoryItemName(ContainerIDToInventoryID(5)) -- First bank bag.
 end
 
 function GetFirstBag(direction)
@@ -236,5 +241,14 @@ end
 
 GetContainerItemInfo = AdjustBagArgument(GetContainerItemInfo)
 GetContainerNumFreeSlots = AdjustBagArgument(GetContainerNumFreeSlots)
-GetContainerNumSlots = AdjustBagArgument(GetContainerNumSlots)
 PickupContainerItem = AdjustBagArgument(PickupContainerItem)
+
+GetContainerNumSlotsOriginal = GetContainerNumSlots
+
+GetContainerNumSlots = function(bag)
+  if bag == BANK_LOGICAL then
+    if pcall(CanUseBank) then bag = BANK_REAL else return 0 end
+  end
+  
+  return GetContainerNumSlotsOriginal(bag)
+end
