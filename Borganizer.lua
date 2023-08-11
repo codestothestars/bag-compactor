@@ -1,7 +1,7 @@
 local fromBag, fromBagDirection, fromSlot, fromSlotDirection, strategy, toBag, toBagDirection, toSlot, toSlotDirection
 
 function Compact(arg)
-  BagCompactorFrame:Show()
+  BorganizerFrame:Show()
 
   local back = string.find(arg, 'back')
 
@@ -30,7 +30,7 @@ function Move()
     end
 
     if strategy.complete() then
-      BagCompactorFrame:Hide()
+      BorganizerFrame:Hide()
       return
     end
 
