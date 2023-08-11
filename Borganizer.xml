@@ -8,4 +8,5 @@
   </Frame>
 
   <Script File="Borganizer.lua" />
+  <Script File="Compact.lua" />
 </Ui>

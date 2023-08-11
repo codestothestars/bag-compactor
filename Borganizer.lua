@@ -1,12 +1,16 @@
 local fromBag, fromBagDirection, fromSlot, fromSlotDirection, strategy, toBag, toBagDirection, toSlot, toSlotDirection
 
-function Compact(arg)
+function Borg(arg)
   BorganizerFrame:Show()
 
   local back = string.find(arg, 'back')
 
   strategy = GetStrategy(arg)
 
+  if not strategy then
+    BorganizerFrame:Hide()
+  end
+  
   fromBagDirection, fromSlotDirection, toBagDirection, toSlotDirection = strategy.getDirection(back)
 
   fromBag, fromSlot = GetStartSlot(fromBagDirection, fromSlotDirection)
@@ -18,14 +22,13 @@ function Move()
     while not IsComplete() do
       local texture, _, locked = GetContainerItemInfo(toBag, toSlot)
 
-      if texture then
-        if locked then return else SetNextToSlot() end
-      else
-        break 
+      if locked then return
+      elseif not strategy.isValidToSlot or strategy.isValidToSlot(texture) then break
+      else SetNextToSlot()
       end
     end
 
-    while not IsComplete() and (not SlotHasMoveableItem(fromBag, fromSlot) or not strategy.isValidMove(fromBag, fromSlot, toBag, toSlot)) do
+    while not IsComplete() and (not SlotHasMoveableItem(fromBag, fromSlot) or not strategy.isValidMove(GetState())) do
       SetNextFromSlot()
     end
 
@@ -42,12 +45,12 @@ function Move()
   end
 end
 
-SLASH_COMPACT1 = "/compact"
+SLASH_BORG1 = "/borg"
 
-SlashCmdList["COMPACT"] = Compact
+SlashCmdList["BORG"] = Borg
 
-local ASCENDING = 1
-local DESCENDING = -ASCENDING
+ASCENDING = 1
+DESCENDING = -ASCENDING
 
 -- The client actually uses -1, but we treat the bank as the highest for
 -- logical consistency and do a conversion with AdjustBagArgument.
@@ -58,65 +61,6 @@ local FIRST_CONTAINER = 0
 local LAST_CONTAINER = BANK_LOGICAL
 
 local FIRST_SLOT = 1
-
--- Compacts in the fewest moves possible with no regard to the order of items.
-local InvertStrategy = {
-  complete = function()
-    if fromBagDirection == ASCENDING then return fromBag > toBag or fromBag == toBag and fromSlot >= toSlot
-    else return fromBag < toBag or fromBag == toBag and fromSlot <= toSlot
-    end
-  end,
-  getDirection = function(back)
-    if back then
-      return ASCENDING, ASCENDING, DESCENDING, DESCENDING
-    else
-      return DESCENDING, DESCENDING, ASCENDING, ASCENDING
-    end
-  end,
-  isValidMove = function(fromBag, fromSlot, toBag, toSlot)
-    if fromBagDirection == ASCENDING then
-      return fromBag < toBag or fromBag == toBag and fromSlot < toSlot
-    else
-      return fromBag > toBag or fromBag == toBag and fromSlot > toSlot
-    end
-  end
-}
-
--- Preserves the natural order of items, i.e. the order in which items are placed when looting.
-local SlideStrategy = {
-  getDirection = function(back)
-    if back then
-      return DESCENDING, DESCENDING, DESCENDING, DESCENDING
-    else
-      return ASCENDING, ASCENDING, ASCENDING, ASCENDING
-    end
-  end,
-  isValidMove = function(fromBag, fromSlot, toBag, toSlot)
-    if fromBagDirection == ASCENDING then
-      return fromBag > toBag or fromBag == toBag and fromSlot > toSlot
-    else
-      return fromBag < toBag or fromBag == toBag and fromSlot < toSlot
-    end
-  end
-}
-
--- Preserves the visual order of items within each bag, left-to-right and top-to-bottom.
-local SlideVisualStrategy = {
-  getDirection = function(back)
-    if back then
-      return DESCENDING, ASCENDING, DESCENDING, ASCENDING
-    else
-      return ASCENDING, DESCENDING, ASCENDING, DESCENDING
-    end
-  end,
-  isValidMove = function(fromBag, fromSlot, toBag, toSlot)
-    if fromBag ~= toBag then
-      if fromBagDirection == ASCENDING then return fromBag > toBag else return fromBag < toBag end
-    end
-
-    if fromSlotDirection == ASCENDING then return fromSlot > toSlot else return fromSlot < toSlot end
-  end
-}
 
 function AdjustBagArgument(func)
   return function(bag, ...)
@@ -129,7 +73,7 @@ function CanUseBank()
 end
 
 function IsComplete()
-  return fromBag == nil or toBag == nil or (strategy.complete and strategy.complete())
+  return fromBag == nil or toBag == nil or (strategy.complete and strategy.complete(GetState()))
 end
 
 function GetFirstBag(direction)
@@ -162,10 +106,19 @@ function GetStartSlot(bagDirection, slotDirection)
   for bag in IterateBags(GetFirstBag(bagDirection), bagDirection) do return bag, GetFirstSlot(bag, slotDirection) end
 end
 
+function GetState()
+  return {
+    fromBag = fromBag,
+    fromBagDirection = fromBagDirection,
+    fromSlot = fromSlot,
+    fromSlotDirection = fromSlotDirection,
+    toBag = toBag,
+    toSlot = toSlot
+  }
+end
+
 function GetStrategy(arg)
-  if string.find(arg, 'slide') and string.find(arg, 'visual') then return SlideVisualStrategy
-  elseif string.find(arg, 'slide') then return SlideStrategy
-  else return InvertStrategy
+  if string.find(arg, 'compact') then return GetCompactStrategy(arg)
   end
 end
 
