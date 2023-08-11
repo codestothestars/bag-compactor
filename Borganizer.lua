@@ -15,7 +15,7 @@ end
 
 function Move()
   while true do
-    while not strategy.complete() do
+    while not IsComplete() do
       local texture, _, locked = GetContainerItemInfo(toBag, toSlot)
 
       if texture then
@@ -25,11 +25,11 @@ function Move()
       end
     end
 
-    while not strategy.complete() and (not SlotHasMoveableItem(fromBag, fromSlot) or not strategy.isValidMove(fromBag, fromSlot, toBag, toSlot)) do
+    while not IsComplete() and (not SlotHasMoveableItem(fromBag, fromSlot) or not strategy.isValidMove(fromBag, fromSlot, toBag, toSlot)) do
       SetNextFromSlot()
     end
 
-    if strategy.complete() then
+    if IsComplete() then
       BorganizerFrame:Hide()
       return
     end
@@ -62,8 +62,7 @@ local FIRST_SLOT = 1
 -- Compacts in the fewest moves possible with no regard to the order of items.
 local InvertStrategy = {
   complete = function()
-    if fromBag == nil or toBag == nil then return true
-    elseif fromBagDirection == ASCENDING then return fromBag > toBag or fromBag == toBag and fromSlot >= toSlot
+    if fromBagDirection == ASCENDING then return fromBag > toBag or fromBag == toBag and fromSlot >= toSlot
     else return fromBag < toBag or fromBag == toBag and fromSlot <= toSlot
     end
   end,
@@ -85,9 +84,6 @@ local InvertStrategy = {
 
 -- Preserves the natural order of items, i.e. the order in which items are placed when looting.
 local SlideStrategy = {
-  complete = function()
-    return fromBag == nil or toBag == nil
-  end,
   getDirection = function(back)
     if back then
       return DESCENDING, DESCENDING, DESCENDING, DESCENDING
@@ -106,7 +102,6 @@ local SlideStrategy = {
 
 -- Preserves the visual order of items within each bag, left-to-right and top-to-bottom.
 local SlideVisualStrategy = {
-  complete = SlideStrategy.complete,
   getDirection = function(back)
     if back then
       return DESCENDING, ASCENDING, DESCENDING, ASCENDING
@@ -131,6 +126,10 @@ end
 
 function CanUseBank()
   return GetInventoryItemName(ContainerIDToInventoryID(5)) -- First bank bag.
+end
+
+function IsComplete()
+  return fromBag == nil or toBag == nil or (strategy.complete and strategy.complete())
 end
 
 function GetFirstBag(direction)
