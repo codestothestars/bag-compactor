@@ -1,4 +1,15 @@
-local fromBag, fromBagDirection, fromSlot, fromSlotDirection, strategy, toBag, toBagDirection, toSlot, toSlotDirection
+local fromBag,
+  fromBagDirection,
+  fromSlot,
+  fromSlotDirection,
+  intervalSeconds,
+  lastMoveTime,
+  strategy,
+  toBag,
+  toBagDirection,
+  toSlot,
+  toSlotDirection,
+  waitingToMove
 
 function Borg(arg)
   BorganizerFrame:Show()
@@ -15,10 +26,18 @@ function Borg(arg)
 
   fromBag, fromSlot = GetStartSlot(fromBagDirection, fromSlotDirection)
   toBag, toSlot = GetStartSlot(toBagDirection, toSlotDirection)
+
+  intervalSeconds = strategy.intervalSeconds or 0
+  lastMoveTime = 0
+  waitingToMove = false
 end
 
 function Move()
+  if waitingToMove then TryMoveItem() end
+
   while true do
+    if waitingToMove then return end
+
     while not IsComplete() do
       local texture, _, locked = GetContainerItemInfo(toBag, toSlot)
 
@@ -37,11 +56,7 @@ function Move()
       return
     end
 
-    PickupContainerItem(fromBag, fromSlot)
-    PickupContainerItem(toBag, toSlot)
-
-    SetNextFromSlot()
-    SetNextToSlot()
+    TryMoveItem()
   end
 end
 
@@ -74,6 +89,23 @@ end
 
 function IsComplete()
   return fromBag == nil or toBag == nil or (strategy.complete and strategy.complete(GetState()))
+end
+
+function MoveItem()
+  PickupContainerItem(fromBag, fromSlot)
+  PickupContainerItem(toBag, toSlot)
+
+  lastMoveTime = GetTime()
+end
+
+function TryMoveItem()
+  waitingToMove = (GetTime() - lastMoveTime) < intervalSeconds
+  if not waitingToMove then
+    MoveItem()
+
+    SetNextFromSlot()
+    SetNextToSlot()
+  end
 end
 
 function GetFirstBag(direction)
