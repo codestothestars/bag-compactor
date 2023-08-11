@@ -9,6 +9,7 @@ local fromBag,
   toBagDirection,
   toSlot,
   toSlotDirection,
+  waitingForMove,
   waitingToMove
 
 function Borg(arg)
@@ -29,6 +30,7 @@ function Borg(arg)
 
   intervalSeconds = strategy.intervalSeconds or 0
   lastMoveTime = 0
+  waitingForMove = false
   waitingToMove = false
 end
 
@@ -36,6 +38,12 @@ function Move()
   if waitingToMove then TryMoveItem() end
 
   while true do
+    if waitingForMove then
+      TryAdvanceCursors()
+
+      if waitingForMove then return end
+    end
+
     if waitingToMove then return end
 
     while not IsComplete() do
@@ -91,6 +99,25 @@ function IsComplete()
   return fromBag == nil or toBag == nil or (strategy.complete and strategy.complete(GetState()))
 end
 
+function TryAdvanceCursors()
+  if strategy.iterative then
+    local _, _, fromLocked = GetContainerItemInfo(fromBag, fromSlot)
+    local _, _, toLocked = GetContainerItemInfo(toBag, toSlot)
+
+    waitingForMove = fromLocked or toLocked
+  end
+
+  if not waitingForMove then
+    if strategy.iterative then
+      fromBag = toBag
+      fromSlot = toSlot
+    end
+
+    SetNextFromSlot()
+    SetNextToSlot()
+  end
+end
+
 function MoveItem()
   PickupContainerItem(fromBag, fromSlot)
   PickupContainerItem(toBag, toSlot)
@@ -101,10 +128,9 @@ end
 function TryMoveItem()
   waitingToMove = (GetTime() - lastMoveTime) < intervalSeconds
   if not waitingToMove then
-    MoveItem()
+    if fromBag ~= toBag or fromSlot ~= toSlot then MoveItem() end
 
-    SetNextFromSlot()
-    SetNextToSlot()
+    TryAdvanceCursors()
   end
 end
 
