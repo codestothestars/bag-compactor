@@ -134,6 +134,10 @@ function TryMoveItem()
   end
 end
 
+function GetItemNameFromLink(itemLink)
+  return string.sub(itemLink, string.find(itemLink, '%[') + 1, string.find(itemLink, ']') - 1)
+end
+
 function GetFirstBag(direction)
   if direction == ASCENDING then return FIRST_CONTAINER else return LAST_CONTAINER end
 end
@@ -176,7 +180,8 @@ function GetState()
 end
 
 function GetStrategy(arg)
-  if string.find(arg, 'compact') then return GetCompactStrategy(arg)
+  if string.find(arg, 'alpha') then return GetAlphabetizeStrategy(arg)
+  elseif string.find(arg, 'compact') then return GetCompactStrategy(arg)
   end
 end
 
@@ -197,6 +202,14 @@ function SetNextToSlot()
   toBag, toSlot = GetNextSlot(toBag, toSlot, toBagDirection, toSlotDirection)
 end
 
+function IterateSubsequentSlots(bag, slot, bagDirection, slotDirection)
+  return function()
+    bag, slot = GetNextSlot(bag, slot, bagDirection, slotDirection)
+
+    if bag ~= nil and slot ~= nil then return bag, slot end
+  end
+end
+
 function SlotHasMoveableItem(bag, slot)
   local texture, _, locked = GetContainerItemInfo(bag, slot)
   return texture and not locked
@@ -215,9 +228,7 @@ if GetContainerNumFreeSlots == nil then
   }
 
   function GetInventoryItemName(slotID)
-    local link = GetInventoryItemLink("player", slotID)
-
-    return string.sub(link, string.find(link, '%[') + 1, string.find(link, ']') - 1)
+    return GetItemNameFromLink(GetInventoryItemLink("player", slotID))
   end
 
   function IsSpecialBag(bagID)
@@ -250,6 +261,7 @@ if GetContainerNumFreeSlots == nil then
 end
 
 GetContainerItemInfo = AdjustBagArgument(GetContainerItemInfo)
+GetContainerItemLink = AdjustBagArgument(GetContainerItemLink)
 GetContainerNumFreeSlots = AdjustBagArgument(GetContainerNumFreeSlots)
 PickupContainerItem = AdjustBagArgument(PickupContainerItem)
 

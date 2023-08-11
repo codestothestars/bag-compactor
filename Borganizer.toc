@@ -1,7 +1,7 @@
 ## Interface: 11200
 ## Title: Borganizer
 ## Author: Ariel Oak
-## Notes: A tool that helps organize the user's inventory by moving all of the items within it to one end.
+## Notes: A tool that helps organize the user's inventory by moving and sorting.
 
 Borganizer.lua
 Borganizer.xml
