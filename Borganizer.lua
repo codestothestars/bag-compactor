@@ -13,6 +13,8 @@ local fromBag,
   waitingToMove
 
 function Borg(arg)
+  if BorganizerFrame:IsVisible() then return end
+
   BorganizerFrame:Show()
 
   local back = string.find(arg, 'back')
